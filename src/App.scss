@@ -1,0 +1,19 @@
+#root {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+}
+.table {
+    border-spacing: 0;
+    width: 40%;
+    th,
+    td {
+        border: 2px solid gray;
+        padding: 12px;
+    }
+}
+.lowest {
+    background-color: blue;
+    color: white;
+}

@@ -2,20 +2,94 @@ import { useEffect, useState } from "react";
 import "./App.scss";
 import axios, { AxiosResponse } from "axios";
 
+type responseType = {
+    rates: {
+        RUB: number;
+        USD: number;
+        EUR: number;
+    };
+    timestamp: number;
+    base: string;
+    date: string;
+};
+
 function App() {
-    const [tableData, setTableData] = useState<string[][] | undefined>(
-        undefined
-    );
+    const [tableData, setTableData] = useState<string[][]>();
+
+    const fetchData = (endpoint: string) => {
+        return axios.get(`http://localhost:3000/api/v1${endpoint}`);
+    };
+
+    const pollData = async (pollEndpoint: string) => {
+        if (!tableData) {
+            return;
+        }
+
+        try {
+            // TODO: replace with fetchData
+            const response = await axios.get(
+                `http://localhost:3000/api/v1${pollEndpoint}`
+            );
+
+            let indexToUpdate: number;
+            if (pollEndpoint === "/first/poll") {
+                indexToUpdate = 1;
+            } else if (pollEndpoint === "/second/poll") {
+                indexToUpdate = 2;
+            } else if (pollEndpoint === "/third/poll") {
+                indexToUpdate = 3;
+            }
+
+            const newData = tableData.map((item: any, index) => {
+                if (index === 0) {
+                    return item;
+                }
+
+                if (!item[0].includes(response.data.base)) {
+                    return item;
+                }
+
+                const currency = item[0].split("/")[0];
+                const newRate = response.data.rates[currency].toFixed(2);
+
+                if (newRate) {
+                    const newItem = [...item];
+                    newItem[indexToUpdate] = String(newRate);
+                    return newItem;
+                }
+
+                return item;
+            });
+
+            setTableData(newData);
+
+            if (response) {
+                await pollData(pollEndpoint);
+            }
+        } catch (error) {
+            console.log("Polling error:", error);
+        }
+    };
 
     useEffect(() => {
         const fetchDataAndPoll = async () => {
             try {
-                const responses: AxiosResponse<any>[] = await Promise.all([
-                    fetchData("/first"),
-                    fetchData("/second"),
-                    fetchData("/third"),
-                ]);
+                const responses: AxiosResponse<responseType>[] =
+                    await Promise.all([
+                        fetchData("/first"),
+                        fetchData("/second"),
+                        fetchData("/third"),
+                    ]);
 
+                const rubToUsd = (
+                    responses[0].data.rates.RUB / responses[0].data.rates.USD
+                ).toFixed(2);
+                const rubToEur = (
+                    responses[0].data.rates.RUB / responses[0].data.rates.EUR
+                ).toFixed(2);
+                const eurToUsd = (
+                    responses[0].data.rates.EUR / responses[0].data.rates.USD
+                ).toFixed(2);
                 let updatedTableData: string[][] = [
                     ["Pair Name / Market", "First", "Second", "Third"],
                     [
@@ -38,10 +112,7 @@ function App() {
                     ],
                     [
                         "RUB/USD",
-                        (
-                            responses[0].data.rates.RUB /
-                            responses[0].data.rates.USD
-                        ).toFixed(2),
+                        rubToUsd,
                         (
                             responses[1].data.rates.RUB /
                             responses[1].data.rates.USD
@@ -53,10 +124,7 @@ function App() {
                     ],
                     [
                         "RUB/EUR",
-                        (
-                            responses[0].data.rates.RUB /
-                            responses[0].data.rates.EUR
-                        ).toFixed(2),
+                        rubToEur,
                         (
                             responses[1].data.rates.RUB /
                             responses[1].data.rates.EUR
@@ -68,10 +136,7 @@ function App() {
                     ],
                     [
                         "EUR/USD",
-                        (
-                            responses[0].data.rates.EUR /
-                            responses[0].data.rates.USD
-                        ).toFixed(2),
+                        eurToUsd,
                         (
                             responses[1].data.rates.EUR /
                             responses[1].data.rates.USD
@@ -84,6 +149,12 @@ function App() {
                 ];
 
                 setTableData(updatedTableData);
+
+                setTimeout(() => {
+                    pollData("/first/poll");
+                    pollData("/second/poll");
+                    pollData("/third/poll");
+                }, 2000);
             } catch (error) {
                 console.log(error);
             }
@@ -91,10 +162,6 @@ function App() {
 
         fetchDataAndPoll();
     }, []);
-
-    const fetchData = (endpoint: string) => {
-        return axios.get(`http://localhost:3000/api/v1${endpoint}`);
-    };
 
     return (
         <>

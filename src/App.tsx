@@ -46,10 +46,27 @@ function App() {
                 }
 
                 if (!item[0].includes(response.data.base)) {
+                    if (item[0] === "RUB/USD") {
+                        const rub2Usd = (
+                            response.data.rates.RUB / response.data.rates.USD
+                        ).toFixed(2);
+                        item[indexToUpdate] = rub2Usd;
+                    } else if (item[0] === "RUB/EUR") {
+                        const rub2Eur = (
+                            response.data.rates.RUB / response.data.rates.EUR
+                        ).toFixed(2);
+                        item[indexToUpdate] = rub2Eur;
+                    } else if (item[0] === "EUR/USD") {
+                        const eur2Usd = (
+                            response.data.rates.EUR / response.data.rates.USD
+                        ).toFixed(2);
+                        item[indexToUpdate] = eur2Usd;
+                    }
                     return item;
                 }
 
                 const currency = item[0].split("/")[0];
+
                 const newRate = response.data.rates[currency].toFixed(2);
 
                 if (newRate) {
@@ -154,7 +171,7 @@ function App() {
                     pollData("/first/poll");
                     pollData("/second/poll");
                     pollData("/third/poll");
-                }, 2000);
+                }, 5000);
             } catch (error) {
                 console.log(error);
             }

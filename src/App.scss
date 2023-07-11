@@ -5,6 +5,8 @@
     text-align: center;
 }
 .table {
+    margin: 0 auto;
+    text-align: left;
     background-color: #f2f2f2;
     border-spacing: 0;
     width: 40%;
@@ -14,6 +16,7 @@
         padding: 12px;
     }
 }
+
 .lowest {
     background-color: #0091ff;
     color: white;

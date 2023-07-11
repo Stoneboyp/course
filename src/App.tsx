@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import "./App.scss";
 import axios, { AxiosResponse } from "axios";
 
-type responseType = {
-    rates: {
-        RUB: number;
-        USD: number;
-        EUR: number;
-    };
+type Rates = {
+    RUB: number;
+    USD: number;
+    EUR: number;
+};
+
+type RatesKey = keyof Rates;
+
+type ResponseType = {
+    rates: Rates;
     timestamp: number;
     base: string;
     date: string;
@@ -16,7 +20,9 @@ type responseType = {
 function App() {
     const [tableData, setTableData] = useState<string[][]>();
 
-    const fetchData = (endpoint: string) => {
+    const fetchData = async <T,>(
+        endpoint: string
+    ): Promise<AxiosResponse<T>> => {
         return axios.get(`http://localhost:3000/api/v1${endpoint}`);
     };
 
@@ -25,20 +31,19 @@ function App() {
             return;
         }
 
-        try {
-            // TODO: replace with fetchData
-            const response = await axios.get(
-                `http://localhost:3000/api/v1${pollEndpoint}`
-            );
+        const indexesMap: Record<string, number> = {
+            "/first/poll": 1,
+            "/second/poll": 2,
+            "/third/poll": 3,
+        };
 
-            let indexToUpdate: number;
-            if (pollEndpoint === "/first/poll") {
-                indexToUpdate = 1;
-            } else if (pollEndpoint === "/second/poll") {
-                indexToUpdate = 2;
-            } else if (pollEndpoint === "/third/poll") {
-                indexToUpdate = 3;
-            }
+        const indexToUpdate: number | undefined = indexesMap[pollEndpoint];
+        if (!indexToUpdate) {
+            return;
+        }
+
+        try {
+            const response = await fetchData<ResponseType>(pollEndpoint);
 
             const newData = tableData.map((item: any, index) => {
                 if (index === 0) {
@@ -65,8 +70,7 @@ function App() {
                     return item;
                 }
 
-                const currency = item[0].split("/")[0];
-
+                const currency = item[0].split("/")[0] as RatesKey;
                 const newRate = response.data.rates[currency].toFixed(2);
 
                 if (newRate) {
@@ -91,11 +95,11 @@ function App() {
     useEffect(() => {
         const fetchDataAndPoll = async () => {
             try {
-                const responses: AxiosResponse<responseType>[] =
-                    await Promise.all([
-                        fetchData("/first"),
-                        fetchData("/second"),
-                        fetchData("/third"),
+                const responses: AxiosResponse<ResponseType>[] =
+                    await Promise.all<AxiosResponse<ResponseType>>([
+                        fetchData<ResponseType>("/first"),
+                        fetchData<ResponseType>("/second"),
+                        fetchData<ResponseType>("/third"),
                     ]);
 
                 const rubToUsd = (
@@ -107,6 +111,7 @@ function App() {
                 const eurToUsd = (
                     responses[0].data.rates.EUR / responses[0].data.rates.USD
                 ).toFixed(2);
+
                 let updatedTableData: string[][] = [
                     ["Pair Name / Market", "First", "Second", "Third"],
                     [
@@ -171,7 +176,7 @@ function App() {
                     pollData("/first/poll");
                     pollData("/second/poll");
                     pollData("/third/poll");
-                }, 5000);
+                }, 1000);
             } catch (error) {
                 console.log(error);
             }
